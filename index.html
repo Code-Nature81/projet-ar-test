@@ -1,47 +1,51 @@
 <!DOCTYPE html>
 <html lang="fr">
   <head>
-    <meta charset="UTF-8">
-    <title>RA GPS + Zoom virtuel</title>
+    <meta charset="UTF-8" />
+    <title>RA GPS + Gesture</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Libs nécessaires -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar-nft.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://unpkg.com/aframe-gesture-detector/dist/aframe-gesture-detector.min.js"></script>
     <script>
-      AFRAME.registerComponent("gesture-handler", {
-        schema: { enabled: { default: true } },
+      AFRAME.registerComponent("scale-on-pinch", {
+        schema: { min: { default: 0.3 }, max: { default: 8 } },
         init: function () {
-          this.handleScale = this.handleScale.bind(this);
-          this.handleRotation = this.handleRotation.bind(this);
-          this.initialDistance = null;
-          this.initialRotation = null;
-          this.el.sceneEl.addEventListener("touchmove", this.handleScale);
-          this.el.sceneEl.addEventListener("touchmove", this.handleRotation);
+          this.initialScale = this.el.object3D.scale.clone();
+          this.el.sceneEl.addEventListener("onefingermove", () => {}); // évite erreurs
+          this.el.sceneEl.addEventListener("twofingermove", this.onPinchMove.bind(this));
         },
-        handleScale: function (event) {
-          if (event.touches.length !== 2) return;
-          const [touch1, touch2] = event.touches;
-          const dx = touch2.clientX - touch1.clientX;
-          const dy = touch2.clientY - touch1.clientY;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          if (!this.initialDistance) this.initialDistance = distance;
-          const scaleFactor = distance / this.initialDistance;
-          const newScale = scaleFactor;
-          this.el.setAttribute("scale", `${newScale} ${newScale} ${newScale}`);
+        onPinchMove: function (event) {
+          const scaleFactor = event.detail.spreadChange / 200;
+          const currentScale = this.el.object3D.scale.x;
+          let newScale = currentScale + scaleFactor;
+          newScale = Math.min(this.data.max, Math.max(this.data.min, newScale));
+          this.el.object3D.scale.set(newScale, newScale, newScale);
+        }
+      });
+
+      AFRAME.registerComponent("rotate-on-drag", {
+        init: function () {
+          this.el.sceneEl.addEventListener("onefingermove", this.onDragMove.bind(this));
         },
-        handleRotation: function (event) {
-          if (event.touches.length !== 1) return;
-          const dx = event.touches[0].clientX - window.innerWidth / 2;
-          const rotation = dx / 5;
-          this.el.setAttribute("rotation", `0 ${rotation} 0`);
+        onDragMove: function (event) {
+          const rotation = this.el.getAttribute("rotation");
+          this.el.setAttribute("rotation", {
+            x: rotation.x,
+            y: rotation.y + event.detail.positionChange.x * 0.5,
+            z: rotation.z
+          });
         }
       });
     </script>
+
     <style>
       body, html {
         margin: 0;
         padding: 0;
-        width: 100%;
         height: 100%;
         overflow: hidden;
       }
@@ -51,20 +55,22 @@
     <a-scene
       vr-mode-ui="enabled: false"
       embedded
-      arjs="sourceType: webcam; debugUIEnabled: false; gpsMinAccuracy: 100"
+      arjs="sourceType: webcam; debugUIEnabled: false; gpsMinAccuracy: 100;"
       renderer="logarithmicDepthBuffer: true;"
+      gesture-detector
     >
       <a-assets>
         <a-asset-item id="modelGLB" src="model.glb"></a-asset-item>
       </a-assets>
 
+      <!-- 🔁 Position GPS à remplacer par ton point réel -->
       <a-entity 
-        id="model"
         gltf-model="#modelGLB"
-        scale="1 1 1"
+        gps-entity-place="latitude: 43.6278; longitude: 1.4600;" 
+        scale="5 5 5"
         rotation="0 180 0"
-        gps-entity-place="latitude: 43.6278; longitude: 1.4600;"
-        gesture-handler
+        scale-on-pinch
+        rotate-on-drag
       ></a-entity>
 
       <a-camera gps-camera rotation-reader></a-camera>
