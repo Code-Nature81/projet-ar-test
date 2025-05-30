@@ -38,8 +38,13 @@
           <a-asset-item id="modeleGLB" src="model.glb"></a-asset-item>
         </a-assets>
 
+        <!-- Lumières -->
+        <a-entity light="type: ambient; intensity: 1"></a-entity>
+        <a-entity light="type: directional; intensity: 0.6" position="1 1 0"></a-entity>
+
+        <!-- Modèle géolocalisé -->
         <a-entity
-          gps-entity-place="latitude: 43.6778; longitude: 1.4600;"  
+          gps-entity-place="latitude: 48.8566; longitude: 2.3522;"
           gltf-model="#modeleGLB"
           scale="2 2 2"
           rotation="0 180 0"
