@@ -1,78 +1,154 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Patrimoine AR</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://cdn.jsdelivr.net/npm/aframe@1.3.0/dist/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/aframe/mindar-aframe.prod.js"></script>
- 
-  <style>
-    
-    body {
-  margin: 0;
-  overflow: hidden;
-}
-#toggleMode {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 9999;
-  background-color: #ffffffcc;
-  border: none;
-  padding: 10px;
-  border-radius: 10px;
-  font-size: 16px;
-  cursor: pointer;
-}
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>Patrimoine en Réalité Augmentée</title>
+<style>
+  body, html { margin:0; overflow:hidden; height:100%; }
+  #info {
+    position: fixed; top: 10px; left: 10px; background: rgba(255,255,255,0.8); padding: 10px; z-index: 10;
+    font-family: Arial, sans-serif; max-width: 300px;
+  }
+  #loading {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-family: Arial, sans-serif; background: #fff; padding: 20px; border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    z-index: 10;
+  }
+  canvas { display: block; }
 </style>
 </head>
-
 <body>
-  <button id="toggleMode">Basculer Vue</button>
 
-  <a-scene
-    mindar-image="imageTargetSrc: ./target.mind; filterMinCF:0.001;"
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: true"
-    embedded
-    renderer="colorManagement: true;"
-    id="ar-scene"
-  >
-    <a-assets>
-      <a-asset-item id="model" src="assets/batiment.glb"></a-asset-item>
-    </a-assets>
+<div id="info">Position GPS en attente...<br>Approchez-vous du lieu pour voir le bâtiment en réalité augmentée.</div>
+<div id="loading">Chargement du modèle 3D...</div>
 
-    <a-camera position="0 0 0" look-controls></a-camera>
-
-    <a-entity mindar-image-target="targetIndex: 0">
-      <a-gltf-model
-        id="model3d"
-        src="#model"
-        scale="0.5 0.5 0.5"
-        position="0 0 0"
-        rotation="0 0 0"
-        visible="false"
-      ></a-gltf-model>
-    </a-entity>
-  </a-scene>
-
-
-
-
+<script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.153.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.153.0/examples/js/libs/stats.min.js"></script>
 
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
-  const toggleButton = document.getElementById("toggleMode");
-  const model = document.getElementById("model3d");
-  let modelVisible = false;
+  // Coordonnées GPS de la bâtisse (exemple)
+  const targetLat = 43.627706; // Remplacez par latitude réelle
+  const targetLon = 1.45994;  // Remplacez par longitude réelle
+  const activationDistanceMeters = 50; // distance pour activer AR
 
-  toggleButton.addEventListener("click", () => {
-    modelVisible = !modelVisible;
-    model.setAttribute("visible", modelVisible);
-    toggleButton.textContent = modelVisible ? "Voir la réalité" : "Voir le modèle historique";
-  });
-});
+  let scene, camera, renderer, model;
+  let isModelLoaded = false;
+  let arActive = false;
+
+  const info = document.getElementById('info');
+  const loading = document.getElementById('loading');
+
+  // Fonction pour calculer la distance entre 2 points GPS en mètres
+  function getDistanceFromLatLonInMeters(lat1,lon1,lat2,lon2) {
+    const R = 6371000; // Radius of the earth in meters
+    const dLat = (lat2-lat1) * Math.PI / 180;
+    const dLon = (lon2-lon1) * Math.PI / 180; 
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2)
+      ; 
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    const d = R * c; // Distance in meters
+    return d;
+  }
+
+  // Initialisation Three.js
+  function initAR() {
+    scene = new THREE.Scene();
+
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 1000);
+    camera.position.set(0, 1.6, 0);
+
+    renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x000000, 0); // transparent background
+    document.body.appendChild(renderer.domElement);
+
+    // Lumière
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444);
+    light.position.set(0, 20, 0);
+    scene.add(light);
+
+    // Chargement modèle GLB (exemple URL à remplacer)
+    const loader = new THREE.GLTFLoader();
+    loader.load('https://github.com/Code-Nature81/projet-ar-test/blob/main/assets/batiment.glb', function(gltf) {
+      model = gltf.scene;
+      model.scale.set(1,1,1);
+      model.position.set(0, 0, -3); // 3 mètres devant la caméra
+      scene.add(model);
+      isModelLoaded = true;
+      loading.style.display = 'none';
+      animate();
+    }, undefined, function(error) {
+      loading.textContent = 'Erreur chargement modèle 3D';
+      console.error(error);
+    });
+  }
+
+  // Animation loop
+  function animate() {
+    if (!arActive) return;
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+  }
+
+  // Demande d'accès caméra et géolocalisation
+  async function startApp() {
+    // Demande accès caméra via getUserMedia
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+      video.style.position = 'fixed';
+      video.style.top = '0';
+      video.style.left = '0';
+      video.style.width = '100%';
+      video.style.height = '100%';
+      video.style.objectFit = 'cover';
+      video.style.zIndex = '-1';
+      document.body.appendChild(video);
+
+      // On attend la position GPS
+      if (!navigator.geolocation) {
+        info.textContent = "Géolocalisation non supportée par ce navigateur.";
+        return;
+      }
+      navigator.geolocation.watchPosition(onPositionReceived, onPositionError, {enableHighAccuracy:true, maximumAge:1000});
+    } catch(e) {
+      info.textContent = "Accès caméra refusé ou erreur: " + e.message;
+    }
+  }
+
+  // Callback géolocalisation
+  function onPositionReceived(position) {
+    const lat = position.coords.latitude;
+    const lon = position.coords.longitude;
+    const dist = getDistanceFromLatLonInMeters(lat, lon, targetLat, targetLon);
+    info.innerHTML = `Votre position: ${lat.toFixed(5)}, ${lon.toFixed(5)}<br>Distance du site: ${dist.toFixed(1)} mètres.`;
+
+    if (dist <= activationDistanceMeters && !arActive) {
+      info.innerHTML += '<br>Vous êtes proche ! Activation de la réalité augmentée...';
+      arActive = true;
+      initAR();
+    } else if (dist > activationDistanceMeters && arActive) {
+      info.innerHTML += '<br>Vous vous êtes éloigné du site, réalité augmentée désactivée.';
+      arActive = false;
+      if(renderer) {
+        renderer.domElement.remove();
+      }
+    }
+  }
+
+  function onPositionError(error) {
+    info.textContent = "Erreur géolocalisation: " + error.message;
+  }
+
+  startApp();
 </script>
 
 </body>
