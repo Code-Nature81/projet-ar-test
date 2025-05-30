@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Reconstruction AR - Patrimoine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/2.2.1/aframe/build/aframe-ar.min.js"></script>
+    <script src="https://unpkg.com/aframe-event-set-component@5.0.0/dist/aframe-event-set-component.min.js"></script>
+    <style>
+      body, html { margin: 0; overflow: hidden; }
+      #infoBox {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(0,0,0,0.6);
+        color: white;
+        padding: 10px;
+        border-radius: 10px;
+        display: none;
+        max-width: 80%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="infoBox"></div>
+
+    <a-scene embedded arjs="sourceType: webcam;">
+      <!-- Assets -->
+      <a-assets>
+        <a-asset-item id="batiment" src="modele/batiment.glb"></a-asset-item>
+        <audio id="narration" src="audio/narration.mp3" preload="auto"></audio>
+      </a-assets>
+
+      <!-- Caméra AR -->
+     <a-marker preset="hiro">
+  <a-entity gltf-model="#batiment" scale="0.5 0.5 0.5" position="0 0 0"></a-entity>
+</a-marker>
+
+
+        <!-- Modèle 3D principal -->
+        <a-entity gltf-model="#batiment" scale="0.5 0.5 0.5" position="0 0 0"></a-entity>
+
+        <!-- Points d'information -->
+        <a-sphere position="0.5 0.5 0.5" radius="0.05" color="#FFD700"
+                  class="info-point"
+                  event-set__enter="_event: click; _target: #infoBox; style: display: block"
+                  onclick="showInfo('Chapiteau roman typique du XIe siècle.')">
+        </a-sphere>
+
+        <a-sphere position="-0.3 0.6 0.2" radius="0.05" color="#00CED1"
+                  class="info-point"
+                  event-set__enter="_event: click; _target: #infoBox; style: display: block"
+                  onclick="showInfo('Entrée principale reconstituée selon les plans de 1890.')">
+        </a-sphere>
+
+      </a-marker>
+
+      <a-entity camera></a-entity>
+    </a-scene>
+
+    <!-- Script pour afficher les infos -->
+    <script>
+      function showInfo(text) {
+        const box = document.getElementById('infoBox');
+        box.textContent = text;
+        box.style.display = 'block';
+        setTimeout(() => box.style.display = 'none', 5000); // Auto-masquer après 5s
+      }
+
+      // Lecture automatique de la narration
+      window.addEventListener('load', () => {
+        const audio = document.getElementById('narration');
+        audio.play().catch(e => {
+          console.log("Lecture auto bloquée, interaction utilisateur requise");
+        });
+      });
+    </script>
+  </body>
+</html>
