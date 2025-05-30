@@ -3,63 +3,90 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>RA Géolocalisée - Patrimoine</title>
+  <title>RA Géolocalisée - Patrimoine (Accès Caméra obligatoire)</title>
 
-  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <!-- AR.js Location Based -->
-  <script src="https://cdn.jsdelivr.net/gh/jeromeetienne/AR.js/aframe/build/aframe-ar-nft.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/jeromeetienne/AR.js/aframe/build/aframe-ar-location-based.min.js"></script>
 
   <style>
     body, html {
       margin: 0; padding: 0; overflow: hidden; height: 100%;
-      font-family: Arial, sans-serif;
       background: #000;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
     }
     #loadingMessage {
-      position: fixed;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
       font-size: 1.2em;
-      z-index: 999;
+      margin-bottom: 20px;
+    }
+    #startButton {
+      padding: 10px 20px;
+      font-size: 1em;
+      background: #0066ff;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
     }
   </style>
 </head>
 
 <body>
-  <div id="loadingMessage">Chargement en cours, veuillez autoriser la caméra...</div>
 
-  <a-scene
-    vr-mode-ui="enabled: false"
-    embedded
-    arjs="sourceType: webcam; debugUIEnabled: false;"
-    renderer="logarithmicDepthBuffer: true; antialias: true"
-    loading-screen="enabled: false"
-  >
+  <div id="loadingMessage">L'application a besoin d'accéder à votre caméra pour fonctionner.</div>
+  <button id="startButton">Autoriser la caméra</button>
 
-    <!-- Chargement du modèle 3D local -->
-    <a-assets>
-      <a-asset-item id="monModele" src="modele.glb"></a-asset-item>
-    </a-assets>
+  <div id="arContainer" style="display:none; width: 100%; height: 100vh;">
+    <a-scene
+      vr-mode-ui="enabled: false"
+      embedded
+      arjs="sourceType: webcam; debugUIEnabled: false;"
+      renderer="logarithmicDepthBuffer: true; antialias: true"
+      loading-screen="enabled: false"
+      style="width: 100%; height: 100%;"
+    >
+      <a-assets>
+        <a-asset-item id="monModele" src="modele.glb"></a-asset-item>
+      </a-assets>
 
-    <!-- Entité 3D à la position GPS -->
-    <a-entity
-      gps-entity-place="latitude: 43.6778; longitude: 1.4600;"  
-      gltf-model="#monModele"
-      scale="4 4 4"        
-      rotation="0 180 0"  
-      
-    ></a-entity>
+      <a-entity
+        gps-entity-place="latitude: 43.6778; longitude: 1.4600;"
+        gltf-model="#monModele"
+        scale="5 5 5"
+        rotation="0 180 0"
+        animation-mixer
+      ></a-entity>
 
-    <a-camera gps-camera rotation-reader></a-camera>
-  </a-scene>
+      <a-camera gps-camera rotation-reader></a-camera>
+    </a-scene>
+  </div>
 
   <script>
-    // Message de chargement + autorisation caméra
-    document.querySelector('a-scene').addEventListener('loaded', () => {
-      document.getElementById('loadingMessage').style.display = 'none';
+    const startBtn = document.getElementById('startButton');
+    const loadingMessage = document.getElementById('loadingMessage');
+    const arContainer = document.getElementById('arContainer');
+
+    startBtn.addEventListener('click', () => {
+      loadingMessage.textContent = "Demande d'accès à la caméra...";
+      // Demander l'accès caméra avec getUserMedia
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then((stream) => {
+          // Caméra autorisée, on peut afficher la scène AR
+          loadingMessage.style.display = 'none';
+          startBtn.style.display = 'none';
+          arContainer.style.display = 'block';
+
+          // Arrêter la capture vidéo qui sert juste à la permission
+          stream.getTracks().forEach(track => track.stop());
+        })
+        .catch((err) => {
+          loadingMessage.textContent = "Accès caméra refusé. L'application ne peut pas fonctionner sans accès caméra.";
+          console.error(err);
+        });
     });
   </script>
 </body>
