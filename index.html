@@ -2,35 +2,32 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <title>RA Patrimoine - Bâtisse 3D</title>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/examples/js/loaders/GLTFLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ar.js@3.4.1/aframe/build/aframe-ar.min.js"></script>
+  <title>Réalité augmentée - Patrimoine</title>
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/2.2.1/aframe/build/aframe-ar.min.js"></script>
   <style>
-    body, html { margin: 0; overflow: hidden; height: 100%; background: #000; }
-    #ar-container { width: 100%; height: 100vh; }
+    body, html { margin: 0; overflow: hidden; height: 100%; }
+    #arjsDebugUIContainer { display: none; } /* cache les UI debug */
   </style>
 </head>
 <body>
-  <!-- Conteneur A-Frame AR.js -->
   <a-scene
     vr-mode-ui="enabled: false"
     embedded
-    arjs="sourceType: webcam; gpsMinAccuracy: 1000; debugUIEnabled: false;"
-    renderer="logarithmicDepthBuffer: true;"
+    arjs="sourceType: webcam; gpsMinAccuracy: 10; debugUIEnabled: false;"
   >
-    <!-- Entité GPS - Remplacer par coordonnées du bâtiment -->
-    <a-entity gps-entity-place="latitude: 43.6278; longitude: 1.4600" id="model3d" rotation="0 180 0" scale="5 5 5">
-      <!-- Chargement du modèle .glb local -->
-      <a-entity
-        gltf-model="batiment.glb"
-        animation-mixer
-        position="0 0 0"
-      ></a-entity>
-    </a-entity>
-
+    <!-- Caméra AR avec position GPS activée -->
     <a-camera gps-camera rotation-reader></a-camera>
+
+    <!-- Modèle 3D .glb placé à une position GPS précise -->
+    <!-- Remplace les coordonnées par celles du lieu réel -->
+    <a-entity
+      gps-entity-place="latitude: 43.6278; longitude: 1.4600;"
+      gltf-model="batiment.glb"
+      scale="10 10 10"
+      rotation="0 180 0"
+      animation-mixer
+    ></a-entity>
   </a-scene>
 </body>
 </html>
