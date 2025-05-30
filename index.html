@@ -2,32 +2,65 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Réalité augmentée - Patrimoine</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>RA Géolocalisée - Patrimoine</title>
+
+  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/2.2.1/aframe/build/aframe-ar.min.js"></script>
+  <!-- AR.js Location Based -->
+  <script src="https://cdn.jsdelivr.net/gh/jeromeetienne/AR.js/aframe/build/aframe-ar-nft.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/jeromeetienne/AR.js/aframe/build/aframe-ar-location-based.min.js"></script>
+
   <style>
-    body, html { margin: 0; overflow: hidden; height: 100%; }
-    #arjsDebugUIContainer { display: none; } /* cache les UI debug */
+    body, html {
+      margin: 0; padding: 0; overflow: hidden; height: 100%;
+      font-family: Arial, sans-serif;
+      background: #000;
+    }
+    #loadingMessage {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 1.2em;
+      z-index: 999;
+    }
   </style>
 </head>
+
 <body>
+  <div id="loadingMessage">Chargement en cours, veuillez autoriser la caméra...</div>
+
   <a-scene
     vr-mode-ui="enabled: false"
     embedded
-    arjs="sourceType: webcam; gpsMinAccuracy: 10; debugUIEnabled: false;"
+    arjs="sourceType: webcam; debugUIEnabled: false;"
+    renderer="logarithmicDepthBuffer: true; antialias: true"
+    loading-screen="enabled: false"
   >
-    <!-- Caméra AR avec position GPS activée -->
-    <a-camera gps-camera rotation-reader></a-camera>
 
-    <!-- Modèle 3D .glb placé à une position GPS précise -->
-    <!-- Remplace les coordonnées par celles du lieu réel -->
+    <!-- Chargement du modèle 3D local -->
+    <a-assets>
+      <a-asset-item id="monModele" src="modele.glb"></a-asset-item>
+    </a-assets>
+
+    <!-- Entité 3D à la position GPS -->
     <a-entity
-      gps-entity-place="latitude: 43.6278; longitude: 1.4600;"
-      gltf-model="batiment.glb"
-      scale="10 10 10"
-      rotation="0 180 0"
-      animation-mixer
+      gps-entity-place="latitude: 43.6778; longitude: 1.4600;"  
+      gltf-model="#monModele"
+      scale="4 4 4"        
+      rotation="0 180 0"  
+      
     ></a-entity>
+
+    <a-camera gps-camera rotation-reader></a-camera>
   </a-scene>
+
+  <script>
+    // Message de chargement + autorisation caméra
+    document.querySelector('a-scene').addEventListener('loaded', () => {
+      document.getElementById('loadingMessage').style.display = 'none';
+    });
+  </script>
 </body>
 </html>
